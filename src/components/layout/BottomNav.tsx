@@ -1,7 +1,8 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, GraduationCap, HeartPulse, Wallet, Users } from 'lucide-react';
+import { Home, GraduationCap, HeartPulse, Wallet, Users, Shield, Briefcase, Settings } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useRole } from '@/contexts/RoleContext';
 import { cn } from '@/lib/utils';
 import { PaddyIcon } from '@/components/icons/PaddyIcon';
 
@@ -10,7 +11,14 @@ const PaddyIconComponent: React.FC<{ className?: string }> = ({ className }) => 
   <PaddyIcon className={className} size={20} />
 );
 
-const navItems = [
+interface NavItem {
+  path: string;
+  icon: React.FC<{ className?: string }>;
+  labelKey: string;
+  roles?: string[]; // If specified, only show for these roles
+}
+
+const baseNavItems: NavItem[] = [
   { path: '/', icon: Home, labelKey: 'nav.home' },
   { path: '/education', icon: GraduationCap, labelKey: 'nav.education' },
   { path: '/community', icon: PaddyIconComponent, labelKey: 'nav.community' },
@@ -18,9 +26,37 @@ const navItems = [
   { path: '/finance', icon: Wallet, labelKey: 'nav.finance' },
 ];
 
+const roleSpecificItems: NavItem[] = [
+  { path: '/jobs', icon: Briefcase, labelKey: 'nav.jobs', roles: ['business', 'student', 'citizen'] },
+  { path: '/admin', icon: Shield, labelKey: 'nav.admin', roles: ['admin', 'superadmin', 'government'] },
+];
+
 export const BottomNav: React.FC = () => {
   const { t } = useLanguage();
+  const { currentRole, isSuperAdminUser, isAdmin } = useRole();
   const location = useLocation();
+
+  // Filter nav items based on role
+  const getVisibleNavItems = () => {
+    const items = [...baseNavItems];
+    
+    // Add role-specific items
+    roleSpecificItems.forEach(item => {
+      if (item.roles) {
+        // SuperAdmin sees everything
+        if (isSuperAdminUser) {
+          items.push(item);
+        } else if (item.roles.includes(currentRole)) {
+          items.push(item);
+        }
+      }
+    });
+    
+    // Limit to 5 items on mobile for cleaner UX
+    return items.slice(0, 5);
+  };
+
+  const navItems = getVisibleNavItems();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 glass-card border-t border-border/50 pb-[env(safe-area-inset-bottom)] bg-background/95 backdrop-blur-xl">
