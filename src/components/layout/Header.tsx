@@ -1,11 +1,14 @@
 import React from 'react';
-import { Bell, Search, Globe, LogOut } from 'lucide-react';
+import { Bell, Search, Globe, LogOut, Crown, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRole } from '@/contexts/RoleContext';
+import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/ui/Logo';
 import { RoleSwitcher } from './RoleSwitcher';
+import founderProfile from '@/assets/founder-profile.webp';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 interface HeaderProps {
   showSearch?: boolean;
@@ -22,7 +26,9 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ showSearch = true, title }) => {
   const { language, setLanguage, t, isBangla } = useLanguage();
-  const { signOut, demoUser } = useAuth();
+  const { signOut, demoUser, user } = useAuth();
+  const { isSuperAdminUser, roleConfig } = useRole();
+  const { profile } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -38,6 +44,9 @@ export const Header: React.FC<HeaderProps> = ({ showSearch = true, title }) => {
     });
     navigate('/auth', { replace: true });
   };
+
+  const displayName = profile?.full_name || demoUser?.fullName || user?.email?.split('@')[0] || 'User';
+  const displayNameBn = profile?.full_name_bn || demoUser?.fullNameBn || displayName;
 
   return (
     <header className="sticky top-0 z-40 glass-card border-b border-border/50 px-3 sm:px-4 py-2 sm:py-3 safe-area-inset-top">
@@ -57,6 +66,14 @@ export const Header: React.FC<HeaderProps> = ({ showSearch = true, title }) => {
 
         {/* Actions - Responsive */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          {/* SuperAdmin Badge */}
+          {isSuperAdminUser && (
+            <Badge variant="outline" className="hidden sm:flex bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border-yellow-500/50 text-yellow-600 dark:text-yellow-400 gap-1">
+              <Crown className="w-3 h-3" />
+              <span className="text-xs">{isBangla ? 'সুপার অ্যাডমিন' : 'Super Admin'}</span>
+            </Badge>
+          )}
+          
           {/* Role Switcher - Always visible */}
           <RoleSwitcher />
           
@@ -87,22 +104,56 @@ export const Header: React.FC<HeaderProps> = ({ showSearch = true, title }) => {
           {/* User Menu with Logout */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 sm:h-9 sm:w-9">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs sm:text-sm font-medium">
-                  {demoUser ? demoUser.fullName.charAt(0) : '👤'}
-                </div>
+              <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 sm:h-9 sm:w-9 p-0 overflow-hidden">
+                {isSuperAdminUser ? (
+                  <img 
+                    src={founderProfile} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover rounded-full ring-2 ring-yellow-500/50"
+                  />
+                ) : (
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs sm:text-sm font-medium">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {demoUser && (
-                <>
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium truncate">{isBangla ? demoUser.fullNameBn : demoUser.fullName}</p>
-                    <p className="text-xs text-muted-foreground truncate">{demoUser.email}</p>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="px-3 py-2">
+                <div className="flex items-center gap-3">
+                  {isSuperAdminUser ? (
+                    <img 
+                      src={founderProfile} 
+                      alt="Profile" 
+                      className="w-10 h-10 object-cover rounded-full ring-2 ring-yellow-500/50"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-medium">
+                      {displayName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {isBangla ? displayNameBn : displayName}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {user?.email || demoUser?.email}
+                    </p>
+                    {isSuperAdminUser && (
+                      <Badge variant="secondary" className="mt-1 text-[10px] bg-yellow-500/20 text-yellow-600 dark:text-yellow-400">
+                        <Crown className="w-2.5 h-2.5 mr-1" />
+                        {isBangla ? 'সুপার অ্যাডমিন' : 'Super Admin'}
+                      </Badge>
+                    )}
                   </div>
-                  <DropdownMenuSeparator />
-                </>
-              )}
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+                <User className="w-4 h-4 mr-2" />
+                {isBangla ? 'প্রোফাইল' : 'Profile'}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
                 <LogOut className="w-4 h-4 mr-2" />
                 {isBangla ? 'লগআউট' : 'Logout'}
